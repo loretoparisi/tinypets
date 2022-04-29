@@ -6,6 +6,13 @@
   <input type="file" multiple="">
 
   <script>
+    async function sleep(time) {
+      var stop = new Date().getTime();
+        while (new Date().getTime() < stop + time) {
+          ;
+        }
+        return true;
+    }
     async function loaded(reader) {
       data = JSON.stringify({"data":[ reader.result ]})
       post = { method: "POST", body: data, headers: { "Content-Type": "application/json" } }
@@ -15,15 +22,24 @@
       var div = document.createElement('div');
       div.innerHTML = `<img src="${reader.result}" width="300"> <p>${prediction['label']}</p>`
       document.body.append(div);
+      return
     }
     
     const photos = document.querySelector('input[type="file"][multiple]');
     photos.addEventListener('input', async () => {
+      var promises=[];
       for (const file of photos.files) {
         const reader = new FileReader();
-        reader.addEventListener('load', ()=>loaded(reader))
+        reader.onload = async (e) => {
+          promises.push( new Promise (async(resolve,reject) => {
+            await loaded(reader)
+            await sleep(500) // LP: this is not necessary unless this https://github.com/fastai/fastai/issues/3385
+            return resolve()
+          }))
+        }
         reader.readAsDataURL(file);
       }
+      await Promise.all(promises);
     });
   </script>
 </body></html>
